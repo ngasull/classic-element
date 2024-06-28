@@ -61,7 +61,10 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
   { children, xmlns: _, ...props }: IntrinsicElementProps<T> & {
     readonly children?: Children;
     readonly xmlns?: never;
-  } = {} as IntrinsicElementProps<T>,
+  } = {} as IntrinsicElementProps<T> & {
+    readonly children?: Children;
+    readonly xmlns?: never;
+  },
 ): ChildNode => {
   if (!type) return mapOrDo(children, (c) => c) as never;
 
@@ -70,15 +73,20 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
   let ref: ((v: ParentNode) => void) | null = null;
   let eventMatch: RegExpMatchArray | null;
 
-  for (let [k, v] of entries(props as IntrinsicElementProps<T>)) {
+  for (
+    let [k, v] of entries(
+      // @ts-ignore TS going mad on this uncastable argument
+      props,
+    )
+  ) {
     if (v != null) {
-      if (k === "ref") {
-        ref = v as unknown as (v: ParentNode) => void;
+      if (k == "ref") {
+        ref = v as (v: ParentNode) => void;
       } else if ((eventMatch = k.toLowerCase().match(eventRegExp))) {
         listen(
           el,
           eventMatch[1],
-          v as unknown as (e: Event) => void,
+          v as (e: Event) => void,
           !!eventMatch[2],
         );
       } else {
