@@ -1,4 +1,6 @@
-# Classic Element
+# @classic/element - Practical Web Components
+
+[![JSR](https://jsr.io/badges/@classic/element)](https://jsr.io/@classic/element)
 
 Aims to be the thinnest practical layer over custom elements / web components.
 
@@ -6,9 +8,9 @@ Aims to be the thinnest practical layer over custom elements / web components.
 
 ### Why custom elements?
 
-JS and CSS can natively be associated to custom element tags. This way, SSR is the default:
+JS and CSS can natively be associated to custom element tags. This way, SSR is solved by default:
 
-- Custom elements are rendered in real time. No FOUC!
+- Custom elements are rendered in real time. No [FOUC](https://en.wikipedia.org/wiki/Flash_of_unstyled_content)!
 - The page contains all SEO information without executing JS
 
 > [!info]
@@ -27,10 +29,10 @@ Classic provides:
 - Simplicity
 - Small bundle size
 - Low memory footprint
-- Optimized reactivity using signals
-- TypeScript-first conversion of attributes (string) into native types with property synchronization
+- Signal-based reactivity
+- JSX = reactive DOM
 - CSS in JS, convenient and optimized
-- Simple reactive DOM generation thanks to JSX
+- TypeScript-first attribute to property synchronization
 - Creation of form-accessible elements through [ElementInternals](https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals)
 - Compressible event helpers in JSX and aside
 - SSR-ready API using [declarative shadow DOM](https://developer.mozilla.org/en-US/docs/Web/API/Web_components/Using_shadow_DOM#declaratively_with_html) (for complex components)
@@ -110,7 +112,7 @@ Classic JSX accepts signals:
 ```tsx
 import { signal } from "classic/element"
 
-const hover = signal(false);
+const hover = signal(false); // Initial value: false
 
 const button = (
 	<span
@@ -162,37 +164,20 @@ Signals are lazy when initialized with a function. This avoids unneeded computat
 ```ts
 const sig = signal(() => throw "Never called!");
 sig(42);
-sig() === 84; // 👍
+assertEquals(sig(), 42); // 👍
 ```
 
 > [!warning] About laziness
-> `onChange` eagerly evaluates the signals it depends on. Otherwise, we couldn't know what to watch.
+> `on` eagerly evaluates the signals it depends on. Otherwise, we couldn't know what to watch.
 > ```ts
 > const sig = signal(() => throw "Oh noes");
 > on(sig, (v) => alert(v)) // 💥
 > ```
 
-## Preserves the principles of the distributed web
-- Low download footprint
-- Fast and synchronous execution
-- No FOUC (flash of unstyled content)
-
-## Benefits
-- Scoped behavior
-- Scoped styling
-- Cross-framework reusability
-- SSR-ready for lazy components
-- Typescript-first
-- Used as a JS library rather than an opaque executable
-- Simple
-
 ## About SSR
 
-At first, Classic aimed SSR as a prime priority goal. Then came the realization that no backend pre-processing is needed for an optimal experience if custom elements are loaded synchronously, just like regular native elements. SEO also works well with custom elements (Google themselves promote custom elements a lot).
+At first, Classic aimed SSR as a prime priority goal. Then came the realization that no backend pre-processing is needed for an optimal experience if custom elements are loaded synchronously, just like regular native elements. This way, **SSR is solved by default**.
 
-Custom elements are like old CSS for both JS component logic and CSS styling.
+SEO also works well with custom elements: they semantically contain all the required information and are even executed by SEO engines. Google themselves promote the use of custom elements (Lit, Polymer, [web.dev](https://web.dev/articles/web-components)...)
 
-Classic kept the design of SSR-ready components, which will allow complex and heavy components to be server-rendered and hydrated asynchronously. This however shouldn't be the default.
-
-In order to implement SSR, declarative shadow DOM can be produced.
-
+Classic kept the design of SSR-ready components, which will allow complex and heavy components to be server-rendered as declarative shadow DOM and hydrated asynchronously. This however **shouldn't be the default**.
