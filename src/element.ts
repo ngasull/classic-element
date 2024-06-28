@@ -109,19 +109,12 @@ export const define = <
 
   class ElementClass extends ParentClass {
     [$props]: Reactive<Props> = fromEntries(
-      entries(propTypes).map(([prop, type]) => {
-        let s = signal(() =>
+      entries(propTypes).map(([prop, type]) => [
+        prop,
+        signal(() =>
           nativePropTypes.get(type)!(this.getAttribute(hyphenize(prop)))
-        );
-        on(s, (value) => {
-          if (value == null || value === false) {
-            this.removeAttribute(propToAttr[prop]);
-          } else {
-            setAttr(this, propToAttr[prop], value);
-          }
-        });
-        return [prop, s];
-      }),
+        ),
+      ]),
     ) as never;
     [$internals] = (form && this.attachInternals()) as Form extends true
       ? ElementInternals
@@ -306,12 +299,6 @@ export const renderChildren = (el: ParentNode, children: Children) =>
         return node!;
       },
     ),
-  );
-
-export const setAttr = (el: Element, k: string, v: PropPrimitive) =>
-  (el as Element).setAttribute(
-    k,
-    v instanceof Date ? v.toISOString() : String(v),
   );
 
 export const css = (tpl: TemplateStringsArray): string => tpl[0];

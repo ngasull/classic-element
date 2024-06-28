@@ -1,15 +1,8 @@
-import { Classic, CustomElement, PropPrimitive } from "./element.ts";
-import { Children, listen, renderChildren, setAttr } from "./element.ts";
+import { Classic, CustomElement } from "./element.ts";
+import { Children, listen, renderChildren } from "./element.ts";
 import { JSXInternal } from "./jsx-dom.d.ts";
 import { callOrReturn, on } from "./signal.ts";
-import {
-  $,
-  doc,
-  entries,
-  getOwnPropertyDescriptors,
-  hyphenize,
-  mapOrDo,
-} from "./util.ts";
+import { $, doc, entries, mapOrDo } from "./util.ts";
 
 export const $type: unique symbol = $() as never;
 
@@ -53,7 +46,6 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
   if (!type) return mapOrDo(children, (c) => c) as never;
 
   let el = ns ? doc.createElementNS(ns, type) : doc.createElement(type);
-  let descriptors = getOwnPropertyDescriptors(el);
   let ref: ((v: ParentNode) => void) | null = null;
   let eventMatch: RegExpMatchArray | null;
 
@@ -78,10 +70,8 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
         on(
           () => callOrReturn(v),
           (v) =>
-            descriptors[k]?.writable
-              // @ts-ignore dynamically set
-              ? el[k] = v
-              : setAttr(el as Element, hyphenize(k), v as PropPrimitive),
+            // @ts-ignore dynamically set
+            el[k] = v,
         );
       }
     }
