@@ -1,15 +1,10 @@
-import { CustomElement, PropPrimitive } from "./element.ts";
-import {
-  $,
-  Children,
-  doc,
-  listen,
-  renderChildren,
-  setAttr,
-} from "./element.ts";
+import { Classic, CustomElement, PropPrimitive } from "./element.ts";
+import { Children, listen, renderChildren, setAttr } from "./element.ts";
 import { JSXInternal } from "./jsx-dom.d.ts";
 import { callOrReturn, on } from "./signal.ts";
 import {
+  $,
+  doc,
   entries,
   getOwnPropertyDescriptors,
   hyphenize,
@@ -34,13 +29,6 @@ export type IntrinsicElementProps<T> = T extends "" ? Record<never, never>
   : T extends keyof JSX.IntrinsicElements ? JSX.IntrinsicElements[T]
   : never;
 
-declare global {
-  namespace Classic {
-    interface Config {}
-    interface Elements {}
-  }
-}
-
 type NativeElement = Element;
 
 type Tags = JSXInternal.IntrinsicElements & Classic.Elements;
@@ -51,10 +39,6 @@ declare namespace JSX {
 }
 
 export type { JSX };
-
-export type GetConfig<K extends string | symbol> = Classic.Config extends
-  Record<K, infer X> ? X
-  : never;
 
 export const jsx = <T extends keyof JSX.IntrinsicElements>(
   type: T,

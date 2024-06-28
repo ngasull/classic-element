@@ -8,6 +8,7 @@ export {
 } from "./element.ts";
 
 export type {
+  Classic,
   CSSRules,
   CustomElement,
   ElementProps,

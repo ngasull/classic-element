@@ -1,10 +1,10 @@
-import { isFunction } from "./util.ts";
+import { $, isFunction } from "./util.ts";
 
 export type Signal<T> = (() => T) & ((v: T) => T) & {
   readonly [$cbs]: Set<() => void>;
 };
 
-const $cbs = Symbol();
+const $cbs: unique symbol = $() as never;
 const tracked: (() => void)[] = [];
 
 const track = <T>(cb: () => T): T => {

@@ -1,3 +1,5 @@
+export const { document: doc, Symbol: $ } = globalThis;
+
 export const { isArray } = Array;
 
 export const {

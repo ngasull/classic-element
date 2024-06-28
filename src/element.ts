@@ -1,6 +1,8 @@
 import { callOrReturn, on, Signal, signal } from "./signal.ts";
 import {
+  $,
   defineProperties,
+  doc,
   entries,
   fromEntries,
   getOwnPropertyDescriptors,
@@ -10,19 +12,17 @@ import {
   mapOrDo,
 } from "./util.ts";
 
-export const { document: doc, Symbol: $ } = globalThis;
-
 const $disconnectCallbacks: unique symbol = $() as never;
 const $internals: unique symbol = $() as never;
 const $props: unique symbol = $() as never;
 declare const $tag: unique symbol;
 
-declare global {
-  namespace Classic {
-    // deno-lint-ignore no-empty-interface
-    interface Events {}
-  }
+declare namespace Classic {
+  interface Elements {}
+  interface Events {}
 }
+
+export type { Classic };
 
 type ClassOf<T> = { new (): T; readonly prototype: T };
 
@@ -299,7 +299,7 @@ export const renderChildren = (el: ParentNode, children: Children) =>
             node = (callOrReturn(c) ?? "") as Node;
             return node = node instanceof Node
               ? node
-              : document.createTextNode(node as string);
+              : doc.createTextNode(node as string);
           },
           (current, prev) => el.replaceChild(current, prev),
         );
