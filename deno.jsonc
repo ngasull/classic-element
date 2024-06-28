@@ -5,6 +5,13 @@
     ".": "./src/mod.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts"
   },
+  "publish": {
+    "include": [
+      "LICENSE",
+      "README.md",
+      "src/**/*.ts"
+    ]
+  },
   "imports": {
     "@classic/element": "./src/mod.ts",
     "@classic/element/jsx-runtime": "./src/jsx-runtime.ts"
