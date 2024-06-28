@@ -36,9 +36,7 @@ export type IntrinsicElementProps<T> = T extends "" ? Record<never, never>
 
 declare global {
   namespace Classic {
-    // deno-lint-ignore no-empty-interface
     interface Config {}
-    // deno-lint-ignore no-empty-interface
     interface Elements {}
   }
 }
@@ -63,7 +61,7 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
   { children, xmlns: _, ...props }: IntrinsicElementProps<T> & {
     readonly children?: Children;
     readonly xmlns?: never;
-  } = {} as IntrinsicElementProps<T> & { readonly children?: Children },
+  } = {} as IntrinsicElementProps<T>,
 ): ChildNode => {
   if (!type) return mapOrDo(children, (c) => c) as never;
 
@@ -72,10 +70,10 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
   let ref: ((v: ParentNode) => void) | null = null;
   let eventMatch: RegExpMatchArray | null;
 
-  for (let [k, v] of entries(props)) {
+  for (let [k, v] of entries(props as IntrinsicElementProps<T>)) {
     if (v != null) {
       if (k === "ref") {
-        ref = v as unknown as typeof ref;
+        ref = v as unknown as (v: ParentNode) => void;
       } else if ((eventMatch = k.toLowerCase().match(eventRegExp))) {
         listen(
           el,
@@ -105,16 +103,6 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
 export { jsx as jsxs };
 
 export const Fragment = "";
-// (
-//   { children }: { key?: string; children?: Children },
-// ): Node => {
-//   let f = new DocumentFragment(),
-//     c = isFunction(children) ? children : () => children;
-//   track(() =>
-//     f.replaceChildren(...mapOrDo(c(), (c) => (isFunction(c) ? c() : c) ?? ""))
-//   );
-//   return f;
-// };
 
 export const ref = <T>(initial?: T): { (el: T): T; (): T } => {
   let stored: T = initial!;

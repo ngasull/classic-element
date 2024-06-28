@@ -20,7 +20,8 @@
   "lint": {
     "rules": {
       "exclude": [
-        "prefer-const"
+        "prefer-const",
+        "no-empty-interface"
       ]
     }
   }
