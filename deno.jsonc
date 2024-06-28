@@ -1,0 +1,27 @@
+{
+  "name": "@classic/element",
+  "version": "0.1.0",
+  "exports": {
+    ".": "./src/mod.ts",
+    "./jsx-runtime": "./src/jsx-runtime.ts"
+  },
+  "imports": {
+    "@classic/element": "./src/mod.ts",
+    "@classic/element/jsx-runtime": "./src/jsx-runtime.ts"
+  },
+  "compilerOptions": {
+    "lib": [
+      "deno.ns",
+      "DOM",
+      "DOM.Iterable",
+      "ES2021"
+    ]
+  },
+  "lint": {
+    "rules": {
+      "exclude": [
+        "prefer-const"
+      ]
+    }
+  }
+}
