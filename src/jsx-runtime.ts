@@ -1,6 +1,6 @@
-import { Classic, CustomElement } from "./element.ts";
-import { Children, listen, renderChildren } from "./element.ts";
-import { JSXInternal } from "./jsx-dom.d.ts";
+import type { Classic, CustomElement } from "./element.ts";
+import { type Children, listen, renderChildren } from "./element.ts";
+import type { JSXInternal } from "./jsx-dom.d.ts";
 import { callOrReturn, on } from "./signal.ts";
 import { $, doc, entries, mapOrDo } from "./util.ts";
 

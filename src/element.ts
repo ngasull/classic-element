@@ -1,4 +1,4 @@
-import { callOrReturn, on, Signal, signal } from "./signal.ts";
+import { callOrReturn, on, type Signal, signal } from "./signal.ts";
 import {
   $,
   defineProperties,
