@@ -3,7 +3,9 @@
   "version": "0.1.1",
   "exports": {
     ".": "./src/mod.ts",
-    "./jsx-runtime": "./src/jsx-runtime.ts"
+    "./jsx-runtime": "./src/jsx-runtime.ts",
+    "./route": "./src/route.ts",
+    "./util": "./src/util.ts"
   },
   "publish": {
     "include": [

@@ -1,3 +1,5 @@
+import type { Tagged } from "./jsx-runtime.ts";
+import type { RouteType } from "./route.ts";
 import { callOrReturn, on, type Signal, signal } from "./signal.ts";
 import {
   $,
@@ -18,7 +20,7 @@ const $props: unique symbol = $() as never;
 declare const $tag: unique symbol;
 
 declare namespace Classic {
-  interface Elements {}
+  interface Elements extends Tagged<RouteType> {}
   interface Events {}
 }
 
