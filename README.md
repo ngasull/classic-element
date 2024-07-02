@@ -135,7 +135,7 @@ const button = (
 > 
 > // ✅ Reactive
 > <input disabled={value} />
-> <input disabled={() => value()} />
+> <input disabled={() => !value()} />
 > ```
 > 
 > This allows Classic to work as a regular library. No need for bundler plugins, like SolidJS does for example.
@@ -148,7 +148,7 @@ import { on, signal } from "classic/element"
 const clicks = signal(0);
 const overs = signal(0);
 
-on(clicks(), (n) => alert(`${n} clicks`));
+on(clicks, (n) => alert(`${n} clicks`));
 
 on(
 	// Functions are read-only signals
