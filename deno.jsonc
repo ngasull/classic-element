@@ -1,6 +1,6 @@
 {
   "name": "@classic/element",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "exports": {
     ".": "./src/mod.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts",
@@ -13,10 +13,6 @@
       "README.md",
       "src/**/*.ts"
     ]
-  },
-  "imports": {
-    "@classic/element": "./src/mod.ts",
-    "@classic/element/jsx-runtime": "./src/jsx-runtime.ts"
   },
   "compilerOptions": {
     "lib": [
