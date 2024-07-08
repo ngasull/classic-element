@@ -1,7 +1,7 @@
 import type { Classic, CustomElement } from "./element.ts";
 import { type Children, listen, renderChildren } from "./element.ts";
 import type { JSXInternal } from "./jsx-dom.d.ts";
-import { callOrReturn, on } from "./signal.ts";
+import { callOrReturn, track } from "./signal.ts";
 import { $, deepMap, doc, entries } from "./util.ts";
 
 export const $type: unique symbol = $() as never;
@@ -67,11 +67,11 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
         );
       } else {
         k = k === "class" ? "className" : k;
-        on(
-          () => callOrReturn(v),
-          (v) =>
+        track(() =>
+          ns
+            ? el.setAttribute(k, String(callOrReturn(v)))
             // @ts-ignore dynamically set
-            el[k] = v,
+            : el[k] = callOrReturn(v)
         );
       }
     }

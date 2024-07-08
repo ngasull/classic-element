@@ -7,16 +7,16 @@ export type Signal<T> = (() => T) & ((v: T) => T) & {
 const $cbs: unique symbol = $() as never;
 const tracked: (() => void)[] = [];
 
-const track = <T>(cb: () => T): T => {
+export const track = <T>(cb: () => T): void => {
   tracked.unshift(cb);
   try {
-    return cb();
+    cb();
   } finally {
     tracked.shift();
   }
 };
 
-export const on = <T>(
+export const onChange = <T>(
   s: () => T,
   listener: (v: T, prev: T) => void,
 ): void => {

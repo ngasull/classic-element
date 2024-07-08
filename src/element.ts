@@ -1,6 +1,6 @@
 import type { Tagged } from "./jsx-runtime.ts";
 import type { RouteType } from "./route.ts";
-import { callOrReturn, on, type Signal, signal } from "./signal.ts";
+import { callOrReturn, onChange, type Signal, signal } from "./signal.ts";
 import {
   $,
   deepMap,

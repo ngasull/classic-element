@@ -16,7 +16,7 @@ export type {
   TypedShadow,
 } from "./element.ts";
 
-export { on, signal } from "./signal.ts";
+export { onChange, signal, track } from "./signal.ts";
 
 export type { Signal } from "./signal.ts";
 
