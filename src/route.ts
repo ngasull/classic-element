@@ -4,10 +4,10 @@ import {
   adoptNode,
   call,
   doc,
+  domParse,
   forEach,
   head,
   newURL,
-  parseHtml,
   preventDefault,
   Promise,
   querySelectorAll,
@@ -56,7 +56,7 @@ const findObsolete = (
 
 const isLocal = (href: string) => {
   let origin = location.origin;
-  return newURL(href, origin).origin != origin;
+  return newURL(href, origin).origin == origin;
 };
 
 const navigate = async (href: string) => {
@@ -87,7 +87,7 @@ const navigate = async (href: string) => {
                 res.redirected ? Promise.reject(navigate(res.url)) : res.text()
               )
               .then((html) =>
-                q == routeRequests[url] ? parseHtml(html) : Promise.reject()
+                q == routeRequests[url] ? domParse(html) : Promise.reject()
               )
               .finally(() => {
                 delete routeRequests[url];
@@ -135,7 +135,7 @@ const processHtmlRoute = (receivedDoc: Document, slot: ChildNode) => {
             }`,
           ),
       ),
-    currentHead: Record<string, Element>;
+    currentHead: Record<string, Element> = {};
 
   forEachSourceable(doc.head, (el, key) => currentHead[key] = el);
   forEachSourceable(

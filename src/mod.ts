@@ -23,3 +23,5 @@ export type { Signal } from "./signal.ts";
 export { ref, svgns } from "./jsx-runtime.ts";
 
 export type { Tagged } from "./jsx-runtime.ts";
+
+export { html } from "./util.ts";

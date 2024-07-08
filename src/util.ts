@@ -14,8 +14,6 @@ export const win = gbl.window;
 
 export const head: HTMLHeadElement = doc?.head!;
 
-export const textHtml = "text/html";
-
 export const routeLoadEvent = "route-load";
 
 // FP
@@ -98,8 +96,12 @@ export const values = Object.values;
 
 const domParser = DOMParser && new DOMParser();
 
-export const parseHtml = (html: string): Document =>
-  domParser.parseFromString(html, textHtml);
+export const domParse = (html: string): Document =>
+  domParser.parseFromString(html, "text/html");
+
+export const html = (
+  xml: string,
+): ChildNode[] => [...domParse(xml).body.childNodes];
 
 export const adoptNode = <T extends Node>(node: T): T => doc.adoptNode(node);
 
