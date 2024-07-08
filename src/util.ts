@@ -182,10 +182,13 @@ export const subEvent = <
   return () => target.removeEventListener(type, wrappedListener);
 };
 
-export const mapOrDo = <T, R>(
-  v: T | readonly T[],
-  cb: (v: T, i: number) => R,
-): R[] => isArray(v) ? v.map(cb) : [cb(v as T, 0)];
+type Deep<T> = T | readonly Deep<T>[];
+
+export const deepMap = <T, R>(v: Deep<T>, cb: (v: T) => R): R[] =>
+  isArray(v) ? deepMap_(v, cb) as R[] : [cb(v as T)];
+
+const deepMap_ = <T, R>(v: Deep<T>, cb: (v: T) => R): R | R[] =>
+  isArray(v) ? v.flatMap((v) => deepMap_(v, cb)) : cb(v as T);
 
 const camelRegExp = /[A-Z]/g;
 

@@ -2,7 +2,7 @@ import type { Classic, CustomElement } from "./element.ts";
 import { type Children, listen, renderChildren } from "./element.ts";
 import type { JSXInternal } from "./jsx-dom.d.ts";
 import { callOrReturn, on } from "./signal.ts";
-import { $, doc, entries, mapOrDo } from "./util.ts";
+import { $, deepMap, doc, entries } from "./util.ts";
 
 export const $type: unique symbol = $() as never;
 
@@ -43,7 +43,7 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
     readonly xmlns?: never;
   },
 ): ChildNode => {
-  if (!type) return mapOrDo(children, (c) => c) as never;
+  if (!type) return deepMap(children, (c) => c) as never;
 
   let el = ns ? doc.createElementNS(ns, type) : doc.createElement(type);
   let ref: ((v: ParentNode) => void) | null = null;

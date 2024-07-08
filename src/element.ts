@@ -3,6 +3,7 @@ import type { RouteType } from "./route.ts";
 import { callOrReturn, on, type Signal, signal } from "./signal.ts";
 import {
   $,
+  deepMap,
   defineProperties,
   doc,
   entries,
@@ -11,7 +12,6 @@ import {
   hyphenize,
   isString,
   keys,
-  mapOrDo,
 } from "./util.ts";
 
 const $disconnectCallbacks: unique symbol = $() as never;
@@ -53,15 +53,15 @@ export type ElementProps<T> = T extends
   ? Partial<Props> & { readonly ref?: (el: Base) => void }
   : never;
 
-export type Children = Child | readonly Child[];
+export type Children = Child | readonly Children[];
 
 export type Child =
-  | Node
+  | ChildNode
   | string
   | number
   | null
   | undefined
-  | Signal<Node | string | number | null | undefined>;
+  | Signal<ChildNode | string | number | null | undefined>;
 
 type Reactive<Props> = { [K in keyof Props]: Signal<Props[K]> };
 
@@ -143,7 +143,7 @@ export const define = <
       }
 
       if (css) {
-        root.adoptedStyleSheets = styleSheet ??= mapOrDo(
+        root.adoptedStyleSheets = styleSheet ??= deepMap(
           css,
           buildStyleSheet,
         );
@@ -285,22 +285,19 @@ export const declarativeFirstStyle = (): void => {
 
 export const renderChildren = (el: ParentNode, children: Children) =>
   el.replaceChildren(
-    ...mapOrDo(
-      callOrReturn(children),
-      (c) => {
-        let node: Node;
-        on(
-          () => {
-            node = (callOrReturn(c) ?? "") as Node;
-            return node = node instanceof Node
-              ? node
-              : doc.createTextNode(node as string);
-          },
-          (current, prev) => el.replaceChild(current, prev),
-        );
-        return node!;
-      },
-    ),
+    ...deepMap(children, (c) => {
+      let node: Node;
+      onChange(
+        () => {
+          node = (callOrReturn(c) ?? "") as Node;
+          return node = node instanceof Node
+            ? node
+            : doc.createTextNode(node as string);
+        },
+        (current, prev) => el.replaceChild(current, prev),
+      );
+      return node!;
+    }),
   );
 
 export const css = (tpl: TemplateStringsArray): string => tpl[0];
