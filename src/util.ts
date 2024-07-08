@@ -3,6 +3,7 @@
 const gbl = globalThis;
 
 const Array = gbl.Array;
+const DOMParser = gbl.DOMParser;
 const JSON = gbl.JSON;
 const Object = gbl.Object;
 
@@ -95,7 +96,7 @@ export const values = Object.values;
 
 // DOM
 
-const domParser = new DOMParser();
+const domParser = DOMParser && new DOMParser();
 
 export const parseHtml = (html: string): Document =>
   domParser.parseFromString(html, textHtml);
