@@ -38,7 +38,8 @@ export const signal = <T>(init: T | (() => T)): Signal<T> => {
       return isInit ? v : (isInit = 1, v = callOrReturn(init) as T);
     },
     (a) => {
-      if (a !== v) {
+      if (!isInit || a !== v) {
+        isInit = 1;
         v = a;
         let prevCbs = cbs;
         cbs = new Set();
