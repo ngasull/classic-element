@@ -17,6 +17,7 @@ import {
 const $disconnectCallbacks: unique symbol = $() as never;
 const $internals: unique symbol = $() as never;
 const $props: unique symbol = $() as never;
+const $propsSet: unique symbol = $() as never;
 declare const $tag: unique symbol;
 
 declare namespace Classic {
@@ -61,11 +62,11 @@ export type Child =
   | number
   | null
   | undefined
-  | Signal<ChildNode | string | number | null | undefined>;
+  | (() => ChildNode | string | number | null | undefined);
 
-type Reactive<Props> = { [K in keyof Props]: Signal<Props[K]> };
+type SignalsSet<Props> = { [K in keyof Props]: (v: Props[K]) => void };
 
-type ReactiveReadonly<Props> = { [K in keyof Props]: () => Props[K] };
+type Reactive<Props> = { [K in keyof Props]: () => Props[K] };
 
 export const define = <
   N extends CustomTag,
@@ -73,7 +74,7 @@ export const define = <
   Form extends boolean | undefined,
   Def extends (
     dom: (children: Children) => TypedShadow<Form>,
-    props: ReactiveReadonly<PropTypesProps<PropTypes>>,
+    props: Reactive<PropTypesProps<PropTypes>>,
     isDeclarative: boolean,
   ) => any,
 >(
@@ -110,13 +111,15 @@ export const define = <
   let propToAttr = {} as Record<keyof Props, string>;
 
   class ElementClass extends ParentClass {
+    [$propsSet]: SignalsSet<Props> = {} as never;
     [$props]: Reactive<Props> = fromEntries(
-      entries(propTypes).map(([prop, type]) => [
-        prop,
-        signal(() =>
+      entries(propTypes).map(([prop, type]) => {
+        let [get, set] = signal(() =>
           nativePropTypes.get(type)!(this.getAttribute(hyphenize(prop)))
-        ),
-      ]),
+        );
+        this[$propsSet][prop as keyof Props] = set;
+        return [prop, get];
+      }),
     ) as never;
     [$internals] = (form && this.attachInternals()) as Form extends true
       ? ElementInternals
@@ -132,9 +135,7 @@ export const define = <
       root ??= this.attachShadow({ mode: "open" }) as TypedShadow<Form>;
       let api = js?.(
         (children: Children) => (renderChildren(root!, children), root!),
-        new Proxy(this[$props], readonlyPropsHandler) as ReactiveReadonly<
-          Props
-        >,
+        this[$props],
         isDeclarative,
       );
 
@@ -160,7 +161,7 @@ export const define = <
       next: string | null,
     ) {
       let prop = attrToProp[name];
-      this[$props][prop](nativePropTypes.get(propTypes[prop])!(next));
+      this[$propsSet][prop](nativePropTypes.get(propTypes[prop])!(next));
     }
   }
 
@@ -179,7 +180,7 @@ export const define = <
           return this[$props][prop]();
         },
         set(value) {
-          this[$props][prop](value);
+          this[$propsSet][prop](value);
         },
       };
     }
@@ -236,10 +237,6 @@ const nativePropTypes = new Map<PropType, (attr: string | null) => any>([
     [decode, (v: string | null) => v == null ? undefined : decode(v)] as const
   ),
 ]);
-
-const readonlyPropsHandler: ProxyHandler<Record<string, () => unknown>> = {
-  get: (target, p) => () => target[p as string](),
-};
 
 export const customEvent: {
   <T extends keyof Classic.Events>(

@@ -1,10 +1,7 @@
-import { $, isFunction } from "./util.ts";
+import { isFunction } from "./util.ts";
 
-export type Signal<T> = (() => T) & ((v: T) => T) & {
-  readonly [$cbs]: Set<() => void>;
-};
+export type Signal<T> = readonly [() => T, (v: T) => void];
 
-const $cbs: unique symbol = $() as never;
 const tracked: (() => void)[] = [];
 
 export const track = <T>(cb: () => T): void => {
@@ -34,20 +31,19 @@ export const callOrReturn = <T>(v: T): ReturnTypeOr<T> =>
   isFunction(v) ? v() : v;
 
 export const signal = <T>(init: T | (() => T)): Signal<T> => {
-  let isInit = 0, v: T;
-  let s = (...args: [] | [T]) => {
-    if (args.length) {
-      if (args[0] !== v) {
-        v = args[0];
-        let prevCbs = s[$cbs];
-        s[$cbs] = new Set();
+  let isInit = 0, v: T, cbs = new Set<() => void>();
+  return [
+    () => {
+      if (tracked[0]) cbs.add(tracked[0]);
+      return isInit ? v : (isInit = 1, v = callOrReturn(init) as T);
+    },
+    (a) => {
+      if (a !== v) {
+        v = a;
+        let prevCbs = cbs;
+        cbs = new Set();
         prevCbs.forEach(track);
       }
-    } else if (tracked[0]) {
-      s[$cbs].add(tracked[0]);
-    }
-    return isInit ? v : (isInit = 1, v = callOrReturn(init) as T);
-  };
-  s[$cbs] = new Set<() => void>();
-  return s as never;
+    },
+  ];
 };
