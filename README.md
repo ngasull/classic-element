@@ -62,11 +62,11 @@ define("x-counter", {
     },
   },
   js(dom) {
-    const count = signal(0);
+    const [count, setCount] = signal(0);
     
     const root = dom(<>Counting {count}</>);
 
-    const t = setInterval(() => count(count() + 1), 1000);
+    const t = setInterval(() => setCount(count() + 1), 1000);
     onDisconnect(root, () => clearInterval(t));
   },
 });
@@ -112,12 +112,12 @@ Classic JSX accepts signals:
 ```tsx
 import { signal } from "classic/element"
 
-const hover = signal(false); // Initial value: false
+const [hover, setHover] = signal(false); // Initial value: false
 
 const button = (
 	<span
-		onMouseOver={() => hover(true)}
-		onMouseOut={() => hover(false)}
+		onMouseOver={() => setHover(true)}
+		onMouseOut={() => setHover(false)}
 		data-hover={hover}
 	>
 		{() => hover() ? "Use CSS for hovers!" : "Hover me"}
@@ -128,7 +128,7 @@ const button = (
 > [!warning] Classic JSX requires explicit signals
 > 
 > ```tsx
-> const value = signal(false);
+> const [value, setValue] = signal(false);
 > 
 > // 🛑 Not reactive
 > <input disabled={value()} />
@@ -145,8 +145,8 @@ Signal values can be manually tracked:
 ```ts
 import { on, signal } from "classic/element"
 
-const clicks = signal(0);
-const overs = signal(0);
+const [clicks, setClicks] = signal(0);
+const [overs, setOvers] = signal(0);
 
 on(clicks, (n) => alert(`${n} clicks`));
 
@@ -156,21 +156,21 @@ on(
 	(sum, prev) => alert(`${sum} interactions, previously ${prev}`)
 );
 
-clicks(1); // Calls alert(1);
+setClicks(1); // Calls alert(1);
 ```
 
 Signals are lazy when initialized with a function. This avoids unneeded computations and allows lazy use.
 
 ```ts
-const sig = signal(() => throw "Never called!");
-sig(42);
+const [sig, setSig] = signal(() => throw "Never called!");
+setSig(42);
 assertEquals(sig(), 42); // 👍
 ```
 
 > [!warning] About laziness
 > `on` eagerly evaluates the signals it depends on. Otherwise, we couldn't know what to watch.
 > ```ts
-> const sig = signal(() => throw "Oh noes");
+> const [sig, setSig] = signal(() => throw "Oh noes");
 > on(sig, (v) => alert(v)) // 💥
 > ```
 
