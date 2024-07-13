@@ -93,7 +93,7 @@ define("x-button", {
           <svg>
             {circle()
             ? <circle r="15" fill="blue" cx={15} cy={15} />
-	        : <rect cx={15} cy={15} />}
+            : <rect cx={15} cy={15} />}
           </svg>
         ))}
         <slot />
@@ -115,13 +115,13 @@ import { signal } from "classic/element"
 const [hover, setHover] = signal(false); // Initial value: false
 
 const button = (
-	<span
-		onMouseOver={() => setHover(true)}
-		onMouseOut={() => setHover(false)}
-		data-hover={hover}
-	>
-		{() => hover() ? "Use CSS for hovers!" : "Hover me"}
-	</span>
+  <span
+    onMouseOver={() => setHover(true)}
+    onMouseOut={() => setHover(false)}
+    data-hover={hover}
+  >
+     {() => hover() ? "Use CSS for hovers!" : "Hover me"}
+  </span>
 );
 ```
 
@@ -152,9 +152,9 @@ const [overs, setOvers] = signal(0);
 on(clicks, (n) => alert(`${n} clicks`));
 
 on(
-	// Functions are read-only signals
-	() => clicks() + overs(),
-	(sum, prev) => alert(`${sum} interactions, previously ${prev}`)
+  // Functions are read-only signals
+  () => clicks() + overs(),
+  (sum, prev) => alert(`${sum} interactions, previously ${prev}`)
 );
 
 setClicks(1); // Calls alert(1);
