@@ -7,12 +7,18 @@ const DOMParser = gbl.DOMParser;
 const JSON = gbl.JSON;
 const Object = gbl.Object;
 
+export const TRUE: true = !0;
+export const FALSE: false = !TRUE;
+export const NULL: null = null;
+export const UNDEFINED: undefined = void 0;
+
 export const doc = gbl.document;
 export const Promise = gbl.Promise;
 export const $ = gbl.Symbol;
 export const win = gbl.window;
 
 export const head: HTMLHeadElement = doc?.head!;
+export const body: HTMLBodyElement = doc?.body! as HTMLBodyElement;
 
 export const routeLoadEvent = "route-load";
 
@@ -71,9 +77,6 @@ export const noop = (): void => {};
 export const popR = <T>(arr: T[]): T[] => (arr.pop(), arr);
 
 export const pushR = <T>(arr: T[], ...v: T[]): T[] => (arr.push(...v), arr);
-
-export const startsWith = (str: string, start: string): boolean =>
-  str.startsWith(start);
 
 export const toLowerCase = (str: string): string => str.toLowerCase();
 
@@ -140,12 +143,12 @@ export const preventDefault = (e: Event): void => e.preventDefault();
 
 export const querySelector = <E extends Element>(
   selector: string,
-  node: ParentNode = doc.body,
+  node: ParentNode = body,
 ): E | null => node.querySelector<E>(selector);
 
 export const querySelectorAll = <E extends Element>(
   selector: string,
-  node: ParentNode = doc.body,
+  node: ParentNode = body,
 ): NodeListOf<E> => node.querySelectorAll<E>(selector);
 
 export const remove = (el: ChildNode): void => el.remove();
@@ -155,34 +158,7 @@ export const replaceWith = (
   ...node: readonly (Node | string)[]
 ): void => el.replaceWith(...node);
 
-type ListenerOfAddEvent<K extends string, T extends EventTarget> = (
-  this: T,
-  e: T extends Window ? K extends keyof WindowEventMap ? WindowEventMap[K]
-    : Event
-    : K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K]
-    : Event,
-) => void;
-
 export const stopPropagation = (e: Event): void => e.stopPropagation();
-
-export const subEvent = <
-  K extends string,
-  T extends EventTarget,
->(
-  target: T,
-  type: K,
-  listener: ListenerOfAddEvent<K, T>,
-  stopPropag?: 1 | 0 | boolean,
-): () => void => {
-  let wrappedListener = (stopPropag
-    ? (function (e) {
-      stopPropagation(e);
-      listener.call(this, e);
-    } as typeof listener)
-    : listener) as EventListener;
-  target.addEventListener(type, wrappedListener);
-  return () => target.removeEventListener(type, wrappedListener);
-};
 
 type Deep<T> = T | readonly Deep<T>[];
 
@@ -199,3 +175,42 @@ export const hyphenize = (camel: string): string =>
     camelRegExp,
     (l: string) => "-" + l.toLowerCase(),
   );
+
+export type EventType<T> =
+  & (undefined extends T ? { new (detail?: T): CustomEvent<T> }
+    : { new (detail: T): CustomEvent<T> })
+  & { type: string };
+
+export const eventType = <T>(type = "cc"): EventType<T> =>
+  class EventClass extends CustomEvent<T> {
+    static type = type;
+    constructor(detail: T) {
+      super(type, { bubbles: TRUE, detail });
+    }
+  } as EventType<T>;
+
+export const listen = <
+  T extends EventTarget,
+  K extends string | EventType<any>,
+>(
+  target: T,
+  event: K,
+  cb: (
+    this: T,
+    e: K extends EventType<infer ET> ? CustomEvent<ET>
+      : T extends Window
+        ? K extends keyof WindowEventMap ? WindowEventMap[K] : Event
+      : K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K]
+      : Event,
+  ) => void,
+  options?: boolean | AddEventListenerOptions | undefined,
+): () => void => {
+  let type = isString(event) ? event : event.type,
+    wrappedCb = isString(event)
+      ? cb as EventListener
+      : function (this: T, e: Event) {
+        if (e instanceof (event as EventType<unknown>)) cb.call(this, e as any);
+      };
+  target.addEventListener(type, wrappedCb, options);
+  return () => target.removeEventListener(type, wrappedCb, options);
+};

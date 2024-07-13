@@ -1,22 +1,17 @@
 import type { Classic, CustomElement } from "./element.ts";
-import { type Children, listen, renderChildren } from "./element.ts";
+import { type Children, renderChildren } from "./element.ts";
 import type { JSXInternal } from "./jsx-dom.d.ts";
 import { callOrReturn, track } from "./signal.ts";
-import { $, deepMap, doc, entries } from "./util.ts";
+import { deepMap, doc, entries, listen, NULL } from "./util.ts";
 
-export const $type: unique symbol = $() as never;
-
-export type JSXElementType = {
-  [$type]: "" | keyof JSX.IntrinsicElements;
-  readonly children?: Children;
-};
+declare const $type: unique symbol;
 
 export type Tagged<T> = T extends
-  CustomElement<infer Tag extends `${string}-${string}`, any, infer Props>
-  ? Record<Tag, Props & { [$type]: T }>
+  CustomElement<infer Tag extends `${string}-${string}`, infer Props, any>
+  ? Record<Tag, Props & { [$type]?: T }>
   : never;
 
-export type DOMClass<T> = T extends { [$type]: infer C } ? C : never;
+export type DOMClass<T> = T extends { [$type]?: infer C } ? C : never;
 
 export type IntrinsicElementProps<T> = T extends "" ? Record<never, never>
   : T extends keyof JSX.IntrinsicElements ? JSX.IntrinsicElements[T]
@@ -46,7 +41,7 @@ export const jsx = <T extends keyof JSX.IntrinsicElements>(
   if (!type) return deepMap(children, (c) => c) as never;
 
   let el = ns ? doc.createElementNS(ns, type) : doc.createElement(type);
-  let ref: ((v: ParentNode) => void) | null = null;
+  let ref: ((v: ParentNode) => void) | null = NULL;
   let eventMatch: RegExpMatchArray | null;
 
   for (

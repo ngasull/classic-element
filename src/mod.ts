@@ -1,11 +1,4 @@
-export {
-  css,
-  customEvent,
-  define,
-  listen,
-  onDisconnect,
-  useInternals,
-} from "./element.ts";
+export { css, define, onDisconnect, useInternals } from "./element.ts";
 
 export type {
   Classic,
@@ -24,4 +17,4 @@ export { ref, svgns } from "./jsx-runtime.ts";
 
 export type { Tagged } from "./jsx-runtime.ts";
 
-export { html } from "./util.ts";
+export { eventType, html, listen } from "./util.ts";

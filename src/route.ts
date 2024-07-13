@@ -1,140 +1,132 @@
 import { type CustomElement, define, onDisconnect } from "./element.ts";
 import { jsx } from "./jsx-runtime.ts";
 import {
+  $,
   adoptNode,
+  body,
   call,
+  dispatchPrevented,
   doc,
   domParse,
+  eventType,
   forEach,
   head,
+  listen,
   newURL,
   preventDefault,
   Promise,
   querySelectorAll,
   replaceWith,
-  startsWith,
-  subEvent,
+  stopPropagation,
+  TRUE,
+  UNDEFINED,
   win,
 } from "./util.ts";
 
 const suspenseDelay = 500;
 
-type Segment = { p: string; s?: ChildNode };
-const segments = new Map<EventTarget, Segment>();
-let unsubRoot: () => void = null!;
+let rootSlot: CCRouteElement | undefined;
+let unsubRoot: (() => void) | undefined = UNDEFINED;
 
-let routeRequests: Record<string, Promise<Document> | undefined> = {};
+let routeRequests: Record<string, Promise<Document | 0> | undefined> = {};
 let currentNavigateQ: Promise<unknown>;
 
-const findObsolete = (
+const findUnloaded = (
   destination: string,
-  parent: ChildNode = doc.body,
-  segment: Segment = segments.get(parent)!,
-): [string[], ChildNode] | null | undefined => {
-  let slot = segment?.s,
-    subSegment = slot && segments.get(slot),
-    subPath = (subSegment ?? segment).p;
-  return slot
-    ? subSegment && startsWith(destination, subPath)
-      // Slot is part of destination: find inside
-      ? findObsolete(destination, slot, subSegment)
-      : startsWith(subPath, destination)
-      // Only index needed
-      ? [[destination], slot]
-      // Subpaths starting from segment
-      : [
-        destination
-          .slice(segment.p.length)
-          .split("/")
-          .map((_, i, arr) => segment.p + arr.slice(0, i + 1).join("/")),
-        slot,
-      ]
-    : parent
-    ? [[destination], parent] // No layout to replace; parent is the page to replace
-    : slot;
-};
+  search: string,
+): [string[], CCRouteElement] | undefined => {
+  let unloadedSegments = [],
+    curSlot: CCRouteElement | undefined = rootSlot,
+    curPath: string | undefined,
+    slot: CCRouteElement | undefined = UNDEFINED,
+    part,
+    url = "",
+    matching: CCRouteElement | boolean | string | undefined = TRUE;
 
-const isLocal = (href: string) => {
-  let origin = location.origin;
-  return newURL(href, origin).origin == origin;
+  for (part of destination.slice(1).split("/")) {
+    url += "/" + part;
+    matching &&= curSlot && part &&
+      (part == (curPath = curSlot.path) || curPath == "*") &&
+      curSlot[$slot];
+    if (!matching) {
+      slot ||= curSlot;
+      if (part) unloadedSegments.push(url + "?cc-layout&");
+    }
+    curSlot = matching ? curSlot![$slot] : UNDEFINED;
+  }
+
+  slot ||= curSlot;
+  unloadedSegments.push(
+    (destination == "/" ? "" : destination) + "?cc-part&" + search.slice(1),
+  );
+
+  return slot && [unloadedSegments, slot];
 };
 
 const navigate = async (href: string) => {
   let { pathname, search } = newURL(href, location.origin),
-    obsolete = findObsolete(pathname);
+    obsolete = findUnloaded(pathname, search);
 
   // Fallback to regular navigation if page defines no route
-  if (!obsolete) return location.replace(href);
+  if (!obsolete) return location.href = href;
 
   let [missingPartials, slot] = obsolete,
-    curSlot = slot as ChildNode | null | undefined,
-    resEls: Promise<Document>[],
-    el: Document,
-    url: string,
+    curSlot: CCRouteElement | undefined = slot,
+    resEls: Promise<Document | 0>[],
+    el: Document | 0,
     navigateQ = currentNavigateQ = Promise.race([
       new Promise<void>((resolve) => setTimeout(resolve, suspenseDelay)),
       Promise.all(
-        resEls = missingPartials.map((
-          path,
-          i,
-          // deno-lint-ignore no-explicit-any
-          q: any,
-        ) => (
-          url = (path == "/" ? "" : path) +
-            (i == missingPartials.length - 1 ? "/.part" + search : "/.layout"),
+        resEls = missingPartials
+          .map((
+            url,
+            // deno-lint-ignore no-explicit-any
+            q: any,
+          ) =>
             routeRequests[url] ??= q = fetch(url)
-              .then((res) =>
-                res.redirected ? Promise.reject(navigate(res.url)) : res.text()
-              )
-              .then((html) =>
-                q == routeRequests[url] ? domParse(html) : Promise.reject()
+              .then((res): 0 | Promise<Document | 0> =>
+                res.redirected
+                  ? Promise.reject(navigate(res.url))
+                  : res.text().then((html) =>
+                    q == routeRequests[url]
+                      ? html ? domParse(html) : 0
+                      : Promise.reject()
+                  )
               )
               .finally(() => {
                 delete routeRequests[url];
               })
-        )),
+          ),
       ),
     ]),
     raceRes = await navigateQ;
 
   if (!raceRes && curSlot) {
-    replaceWith(curSlot, curSlot = jsx("progress"));
+    replaceWith(
+      curSlot,
+      curSlot = jsx("cc-route", {
+        children: jsx("progress"),
+      }) as CCRouteElement,
+    );
   }
 
   for await (el of resEls) {
     if (currentNavigateQ != navigateQ) return;
-    if (!(curSlot = processHtmlRoute(el, curSlot!))) break;
+    if (el && !(curSlot = processHtmlRoute(el, curSlot!))) break;
   }
 
   if (location.href != href) history.pushState(0, "", href);
 };
 
-const processHtmlRoute = (receivedDoc: Document, slot: ChildNode) => {
-  let fragment = new DocumentFragment();
-  fragment.append(...adoptNode(receivedDoc.body).children);
+const processHtmlRoute = (receivedDoc: Document, slot: CCRouteElement) => {
+  let title = receivedDoc.title,
+    receivedBody = adoptNode(receivedDoc.body),
+    children = [...receivedBody.children];
 
-  if (receivedDoc.title) doc.title = receivedDoc.title;
+  if (title) doc.title = title;
 
-  let tagName: string,
-    forEachSourceable = (
-      head: HTMLHeadElement,
-      cb: (el: HTMLLinkElement | HTMLScriptElement, key: string) => void,
-    ) =>
-      forEach(
-        querySelectorAll<HTMLLinkElement | HTMLScriptElement>(
-          `link,script`,
-          head,
-        ),
-        (el) =>
-          cb(
-            el,
-            `${tagName = el.tagName}:${
-              tagName == "LINK"
-                ? (el as HTMLLinkElement).href
-                : (el as HTMLScriptElement).src
-            }`,
-          ),
-      ),
+  let newSegment = children[0] as CCRouteElement,
+    newScripts = querySelectorAll<HTMLScriptElement>("script", receivedBody),
     currentHead: Record<string, Element> = {};
 
   forEachSourceable(doc.head, (el, key) => currentHead[key] = el);
@@ -143,16 +135,33 @@ const processHtmlRoute = (receivedDoc: Document, slot: ChildNode) => {
     (el, key) => !currentHead[key] && head.append(adoptNode(el)),
   );
 
-  replaceWith(slot, fragment);
+  replaceWith(slot, ...children);
 
   // Scripts parsed with DOMParser are not marked to be run
-  forEach(
-    querySelectorAll<HTMLScriptElement>("script", fragment),
-    reviveScript,
-  );
+  forEach(newScripts, reviveScript);
 
-  return segments.get(fragment.children[0])?.s;
+  return newSegment[$slot];
 };
+
+const forEachSourceable = (
+  head: HTMLHeadElement,
+  cb: (el: HTMLLinkElement | HTMLScriptElement, key: string) => void,
+) =>
+  forEach(
+    querySelectorAll<HTMLLinkElement | HTMLScriptElement>(
+      `link,script`,
+      head,
+    ),
+    (el, tagName?: any) =>
+      cb(
+        el,
+        `${tagName = el.tagName}:${
+          tagName == "LINK"
+            ? (el as HTMLLinkElement).href
+            : (el as HTMLScriptElement).src
+        }`,
+      ),
+  );
 
 const reviveScript = (script: HTMLScriptElement) => {
   let copy = doc.createElement("script");
@@ -160,71 +169,80 @@ const reviveScript = (script: HTMLScriptElement) => {
   replaceWith(script, copy);
 };
 
+const isLocal = (href: string) => {
+  let origin = location.origin;
+  return newURL(href, origin).origin == origin;
+};
+
 const subRoot = () => {
   let t: EventTarget | null,
-    body = doc.body,
     subs: Array<() => void> = [
-      subEvent(
+      listen(
         body,
         "click",
         (e) =>
           !e.ctrlKey &&
           !e.shiftKey &&
           (t = e.target) instanceof HTMLAnchorElement &&
-          (isLocal(t.href) ? navigate(t.href) : preventDefault(e)),
+          isLocal(t.href) && (preventDefault(e), navigate(t.href)),
       ),
 
-      subEvent(
+      listen(
         body,
         "submit",
         (e) =>
           (t = e.target) instanceof HTMLFormElement &&
           t.method == "get" &&
           !e.defaultPrevented &&
-          (isLocal(t.action) ? navigate(t.action) : preventDefault(e)),
+          isLocal(t.action) && (preventDefault(e), navigate(t.action)),
       ),
 
-      subEvent(win, "popstate", () => navigate(location.href)),
+      listen(body, SlotEvent, (e) => rootSlot = e.detail),
+
+      listen(win, "popstate", () => navigate(location.href)),
     ];
 
-  segments.set(body, { p: "/" });
-
   unsubRoot = () => {
-    segments.delete(body);
     subs.map(call);
     routeRequests = {};
+    unsubRoot = UNDEFINED;
   };
 };
 
-export type RouteType = CustomElement<
-  "cc-route",
-  HTMLElement,
-  { path?: string }
->;
+const SlotEvent = eventType<CCRouteElement | undefined>();
+
+type CCRouteElement =
+  & InstanceType<CCRouteElementClass>
+  & { get [$slot](): CCRouteElement | undefined };
+
+export type CCRouteElementClass = CustomElement<"cc-route", { path?: string }>;
+
+const $slot: unique symbol = $() as never;
 
 define("cc-route", {
   props: { path: String },
-  js(dom, props) {
-    const path = props.path();
-    const root = dom(jsx("slot"));
-    const host = root.host;
+  js(dom) {
+    let root = dom(jsx("slot"));
+    let host = root.host;
+    let slot: CCRouteElement | undefined = UNDEFINED;
 
-    if (!unsubRoot) subRoot();
+    unsubRoot ?? subRoot();
 
-    if (path) segments.set(host, { p: path });
-
-    // Notify closest parent that this target is the slot
-    let parent: Node | null = host,
-      parentSegment: Segment | null | undefined;
-    do {
-      parent = parent.parentNode;
-      parentSegment = parent && segments.get(parent);
-    } while (parent && !parentSegment);
-    if (parentSegment) parentSegment.s = host;
-
-    onDisconnect(root, () => {
-      if (path != null) segments.delete(host);
-      if (segments.size > 1 && parent) delete segments.get(parent)!.s;
+    listen(host, SlotEvent, (e) => {
+      if (e.target != host) {
+        slot = e.detail;
+        stopPropagation(e);
+      }
     });
+
+    dispatchPrevented(host, new SlotEvent(host));
+
+    onDisconnect(root, () => dispatchPrevented(host, new SlotEvent()));
+
+    return {
+      get [$slot]() {
+        return slot;
+      },
+    };
   },
-}) satisfies RouteType;
+}) satisfies CCRouteElementClass;

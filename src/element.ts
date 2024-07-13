@@ -1,6 +1,6 @@
 import type { Tagged } from "./jsx-runtime.ts";
-import type { RouteType } from "./route.ts";
-import { callOrReturn, onChange, type Signal, signal } from "./signal.ts";
+import type { CCRouteElementClass } from "./route.ts";
+import { callOrReturn, onChange, signal } from "./signal.ts";
 import {
   $,
   deepMap,
@@ -12,6 +12,8 @@ import {
   hyphenize,
   isString,
   keys,
+  NULL,
+  UNDEFINED,
 } from "./util.ts";
 
 const $disconnectCallbacks: unique symbol = $() as never;
@@ -21,8 +23,7 @@ const $propsSet: unique symbol = $() as never;
 declare const $tag: unique symbol;
 
 declare namespace Classic {
-  interface Elements extends Tagged<RouteType> {}
-  interface Events {}
+  interface Elements extends Tagged<CCRouteElementClass> {}
 }
 
 export type { Classic };
@@ -31,27 +32,29 @@ type ClassOf<T> = { new (): T; readonly prototype: T };
 
 type CustomTag = `${string}-${string}`;
 
-export type CustomElement<Tag extends CustomTag | undefined, T, Props> =
-  & ClassOf<T>
+export type CustomElement<
+  Tag extends CustomTag | undefined,
+  Props,
+  T = unknown,
+> =
+  & ClassOf<Element & Props & T>
   & {
     [$tag]?: Tag;
     readonly [$props]: Props;
   };
 
-export type TypedShadow<
-  Form extends boolean | undefined = boolean | undefined,
-> =
+export type TypedShadow<Public, Form extends boolean | undefined> =
   & ShadowRoot
   & {
-    readonly host: {
+    readonly host: Public & {
       readonly [$internals]: Form extends true ? ElementInternals : never;
       readonly [$disconnectCallbacks]: Array<() => void>;
     };
   };
 
 export type ElementProps<T> = T extends
-  CustomElement<CustomTag, infer Base, infer Props>
-  ? Partial<Props> & { readonly ref?: (el: Base) => void }
+  CustomElement<CustomTag, infer Props, infer Base>
+  ? Partial<Props> & { readonly ref?: (el: Element & Base) => void }
   : never;
 
 export type Children = Child | readonly Children[];
@@ -73,10 +76,14 @@ export const define = <
   PropTypes extends Record<string, PropType>,
   Form extends boolean | undefined,
   Def extends (
-    dom: (children: Children) => TypedShadow<Form>,
-    props: Reactive<PropTypesProps<PropTypes>>,
+    dom: (
+      children: Children,
+    ) => TypedShadow<Api & Props, Form>,
+    props: Reactive<Props>,
     isDeclarative: boolean,
   ) => any,
+  Props extends PropTypesProps<PropTypes>,
+  Api extends ReturnType<Def>,
 >(
   name: N,
   { props: propTypes = {} as PropTypes, extends: extendsTag, form, js, css }: {
@@ -90,13 +97,7 @@ export const define = <
       | (string | CSSRules | CSSStyleSheet)[];
     readonly js?: Def;
   },
-): CustomElement<
-  N,
-  HTMLElement & (ReturnType<Def> extends void ? unknown : ReturnType<Def>),
-  PropTypesProps<PropTypes>
-> => {
-  type Props = PropTypesProps<PropTypes>;
-
+): CustomElement<N, Props, Api> => {
   if (!doc) {
     // @ts-ignore stub switch for universal compiling
     return;
@@ -106,7 +107,7 @@ export const define = <
     (extendsTag
       ? doc.createElement(extendsTag).constructor
       : HTMLElement) as typeof HTMLElement;
-  let styleSheet: CSSStyleSheet[] | null = null;
+  let styleSheet: CSSStyleSheet[] | null = NULL;
   let attrToProp: Record<string, keyof Props> = {};
   let propToAttr = {} as Record<keyof Props, string>;
 
@@ -130,9 +131,12 @@ export const define = <
     static readonly formAssociated = !!form;
 
     connectedCallback() {
-      let root = this.shadowRoot as TypedShadow<Form> | null;
+      let root = this.shadowRoot as TypedShadow<Api & Props, Form> | null;
       let isDeclarative = !!root;
-      root ??= this.attachShadow({ mode: "open" }) as TypedShadow<Form>;
+      root ??= this.attachShadow({ mode: "open" }) as TypedShadow<
+        Api & Props,
+        Form
+      >;
       let api = js?.(
         (children: Children) => (renderChildren(root!, children), root!),
         this[$props],
@@ -170,10 +174,10 @@ export const define = <
     [p: string]: ThisType<ElementClass>;
   } = {};
 
-  for (let prop of keys(propTypes)) {
+  for (let prop of keys(propTypes) as (keyof Props & string)[]) {
     let attr = hyphenize(prop);
     attrToProp[attr] = prop;
-    propToAttr[prop as keyof Props] = attr;
+    propToAttr[prop] = attr;
     if (!(prop in proto)) {
       properties[prop] = {
         get() {
@@ -191,23 +195,27 @@ export const define = <
 
   customElements.define(name, ElementClass, { extends: extendsTag });
 
-  return ElementClass as unknown as CustomElement<
-    undefined,
-    HTMLElement & (ReturnType<Def> extends void ? unknown : ReturnType<Def>),
-    PropTypesProps<PropTypes>
-  >;
+  return ElementClass as unknown as CustomElement<N, Props, Api>;
 };
 
-export const onDisconnect = (root: TypedShadow, cb: () => void): void => {
+export const onDisconnect = (
+  root: TypedShadow<any, boolean>,
+  cb: () => void,
+): void => {
   root.host[$disconnectCallbacks].push(cb);
 };
 
-export const useInternals = (root: TypedShadow<true>): ElementInternals =>
+export const useInternals = (root: TypedShadow<any, true>): ElementInternals =>
   root.host[$internals];
 
-export type PropTypesProps<PropTypes extends Record<string, PropType>> = {
-  [K in keyof PropTypes]: PropTypePrimitive<PropTypes[K]>;
-};
+type MakeUndefinedOptional<T> =
+  & { [K in keyof T as undefined extends T[K] ? K : never]?: T[K] }
+  & { [K in keyof T as undefined extends T[K] ? never : K]: T[K] };
+
+export type PropTypesProps<PropTypes extends Record<string, PropType>> =
+  MakeUndefinedOptional<
+    { [K in keyof PropTypes]: PropTypePrimitive<PropTypes[K]> }
+  >;
 
 export type PropPrimitive =
   | boolean
@@ -234,37 +242,9 @@ export type PropType =
 const nativePropTypes = new Map<PropType, (attr: string | null) => any>([
   [Boolean, (attr: string | null) => attr != null],
   ...[Number, BigInt, String, Date].map((decode: PropType) =>
-    [decode, (v: string | null) => v == null ? undefined : decode(v)] as const
+    [decode, (v: string | null) => v == NULL ? UNDEFINED : decode(v)] as const
   ),
 ]);
-
-export const customEvent: {
-  <T extends keyof Classic.Events>(
-    type: Classic.Events[T] extends void | undefined ? T : never,
-    detail?: Classic.Events[T],
-  ): CustomEvent<Classic.Events[T]>;
-  <T extends keyof Classic.Events>(
-    type: T,
-    detail: Classic.Events[T],
-  ): CustomEvent<Classic.Events[T]>;
-} = <T extends keyof Classic.Events>(
-  type: T,
-  detail: Classic.Events[T],
-): CustomEvent<Classic.Events[T]> => new CustomEvent(type, { detail });
-
-export const listen = <T extends EventTarget, K extends string>(
-  target: T,
-  event: K,
-  cb: (
-    this: T,
-    e: T extends Window
-      ? K extends keyof WindowEventMap ? WindowEventMap[K] : Event
-      : K extends keyof HTMLElementEventMap ? HTMLElementEventMap[K]
-      : K extends keyof Classic.Events ? CustomEvent<Classic.Events[K]>
-      : Event,
-  ) => void,
-  options?: boolean | AddEventListenerOptions | undefined,
-): void => target.addEventListener(event, cb as EventListener, options);
 
 export const declarativeFirstStyle = (): void => {
   let tagStyles: Record<string, CSSStyleSheet[] | undefined> = {},
@@ -306,9 +286,11 @@ type CSSDeclaration = { [k: string]: string | number | CSSDeclaration };
 const buildStyleSheet = (
   rules: string | CSSRules | CSSStyleSheet,
 ): CSSStyleSheet => {
-  if (rules instanceof CSSStyleSheet) return rules;
+  let Clazz = CSSStyleSheet, styleSheet;
 
-  let styleSheet = new CSSStyleSheet();
+  if (rules instanceof Clazz) return rules;
+
+  styleSheet = new Clazz();
   if (isString(rules)) {
     styleSheet.replace(rules);
   } else {
