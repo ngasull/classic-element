@@ -15,6 +15,7 @@ JS and CSS can natively be associated to custom element tags. This way, SSR is s
 
 > [!NOTE]
 > **This implies much simpler development stacks, only requiring backends to produce classic HTML**.
+> 
 > In most cases, custom elements are ideally bundled together and inlined into the first download of a page. Subsequent navigation may be further sped up by dynamically fetching content.
 
 Thanks to [CSS parts](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_shadow_parts) and [variables](https://developer.mozilla.org/en-US/docs/Web/CSS/Using_CSS_custom_properties), custom elements solve known issues with nesting and precedence.
@@ -124,7 +125,9 @@ const button = (
 );
 ```
 
-> [!IMPORTANT] Classic JSX requires explicit signals
+> [!IMPORTANT]
+> Classic JSX requires explicit signals:
+> 
 > ```tsx
 > const [value, setValue] = signal(false);
 > 
@@ -135,6 +138,7 @@ const button = (
 > <input disabled={value} />
 > <input disabled={() => !value()} />
 > ```
+> 
 > This allows Classic to work as a regular library. No need for bundler plugins, like SolidJS does for example.
 
 Signal values can be manually tracked:
@@ -166,6 +170,7 @@ assertEquals(sig(), 42); // 👍
 
 > [!IMPORTANT]
 > **About laziness**: `on` eagerly evaluates the signals it depends on. Otherwise, we couldn't know what to watch.
+> 
 > ```ts
 > const [sig, setSig] = signal(() => throw "Oh noes");
 > on(sig, (v) => alert(v)) // 💥
