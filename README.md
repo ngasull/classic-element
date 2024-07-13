@@ -13,7 +13,7 @@ JS and CSS can natively be associated to custom element tags. This way, SSR is s
 - Custom elements are rendered in real time. No [FOUC](https://en.wikipedia.org/wiki/Flash_of_unstyled_content)!
 - The page contains all SEO information without executing JS
 
-> [!info]
+> [!INFO]
 > **This implies much simpler development stacks, only requiring backends to produce classic HTML**.
 > 
 > In most cases, custom elements are ideally bundled together and inlined into the first download of a page. Subsequent navigation may be further sped up by dynamically fetching content.
@@ -125,7 +125,7 @@ const button = (
 );
 ```
 
-> [!warning] Classic JSX requires explicit signals
+> [!WARNING] Classic JSX requires explicit signals
 > 
 > ```tsx
 > const [value, setValue] = signal(false);
@@ -167,7 +167,7 @@ setSig(42);
 assertEquals(sig(), 42); // 👍
 ```
 
-> [!warning] About laziness
+> [!WARNING] About laziness
 > `on` eagerly evaluates the signals it depends on. Otherwise, we couldn't know what to watch.
 > ```ts
 > const [sig, setSig] = signal(() => throw "Oh noes");
